@@ -1,0 +1,108 @@
+unit ClassCell;
+
+interface
+
+Uses
+    PngImage,Vcl.Graphics,Vcl.ExtCtrls;
+
+type
+    TCell = Class
+    private
+        BackColor,Image:TPicture;
+        isQueen:Boolean;
+    public
+        CellImage:TImage;
+        constructor Create(Curr:TImage);
+        procedure SetBackColor(Color:TPicture);
+        procedure SetImage(Curr:TPicture);
+        procedure ReDraw();
+        function GetImage():TPicture;
+        function GetBackColor():TPicture;
+        function GetCellImage():TImage;
+        procedure SetCellImage(Curr:TImage);
+        procedure SetQueenParam(Curr:Boolean);
+        function GetQueenParam():Boolean;
+        procedure Activate();
+        procedure Deactivate();
+    End;
+
+implementation
+
+constructor TCell.Create(Curr:TImage);
+begin	   
+    isQueen:=False; 
+    CellImage:=Curr;
+end;
+
+procedure TCell.Activate();
+begin
+    CellImage.Enabled:=True;
+    ReDraw();
+end;
+
+procedure TCell.Deactivate();
+begin
+    CellImage.Enabled:=False;
+    ReDraw();
+end;
+
+procedure TCell.SetQueenParam(Curr:Boolean);
+begin
+    isQueen:=Curr;
+    ReDraw();
+end;
+
+function TCell.GetQueenParam():Boolean;
+begin
+    Result:=isQueen;
+end;
+
+function TCell.GetCellImage():TImage;
+begin
+    Result:=CellImage;
+end;
+
+function TCell.GetBackColor():TPicture;
+begin
+    Result:=BackColor;
+end;
+
+function TCell.GetImage():TPicture;
+begin
+    Result:=Image;
+end;
+
+procedure TCell.SetCellImage(Curr:TImage);
+begin
+    CellImage:=Curr;
+end;
+
+procedure TCell.SetBackColor(Color:TPicture);
+begin
+    BackColor:=Color;
+    ReDraw();
+end;
+
+procedure TCell.SetImage(Curr:TPicture);
+begin
+    Image:=Curr;
+    ReDraw();
+end;
+
+procedure TCell.ReDraw();
+var
+    Queen:TPicture;
+begin
+    CellImage.Canvas.Draw(0, 0, BackColor.Graphic);
+    if Image<>nil then
+        CellImage.Canvas.Draw(0, 0, Image.Graphic);
+    if isQueen or (CellImage.Enabled and (Image<>nil)) then         //потом убрать
+    Begin
+        Queen := TPicture.Create;
+        Queen.LoadFromFile('\\Mac\Home\Desktop\Queen.png');
+        CellImage.Canvas.Draw(0, 0, Queen.Graphic);
+    End;
+end;
+
+end.
+

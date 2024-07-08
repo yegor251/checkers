@@ -1,0 +1,16 @@
+program projectKursach;
+
+uses
+  Vcl.Forms,
+  kursach in 'kursach.pas' {Form3},
+  Stack in 'Stack.pas',
+  PicturesUnit in 'PicturesUnit.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TForm3, Form3);
+  Application.Run;
+end.

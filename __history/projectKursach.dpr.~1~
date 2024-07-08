@@ -1,0 +1,15 @@
+program projectKursach;
+
+uses
+  Vcl.Forms,
+  kursach in '\\Mac\Home\Desktop\Новая папка\kursach.pas' {Form3},
+  Unit3 in '\\Mac\Home\Desktop\Новая папка\Unit3.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TForm3, Form3);
+  Application.Run;
+end.

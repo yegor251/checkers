@@ -1,0 +1,21 @@
+program projectKursach;
+
+uses
+  Vcl.Forms,
+  MenuUnit in 'MenuUnit.pas' {MenuForm},
+  Stack in 'Stack.pas',
+  PicturesUnit in 'PicturesUnit.pas',
+  GameUnit in 'GameUnit.pas' {Form3},
+  Vcl.Themes,
+  Vcl.Styles;
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  TStyleManager.TrySetStyle('Tablet Dark');
+  Application.CreateForm(TMenuForm, MenuForm);
+  Application.CreateForm(TForm3, Form3);
+  Application.Run;
+end.

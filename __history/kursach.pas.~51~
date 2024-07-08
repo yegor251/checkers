@@ -1,0 +1,88 @@
+Unit kursach;
+
+Interface
+
+Uses
+    Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+    Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.ImageList, JPEG,
+    Vcl.ImgList, Vcl.ExtCtrls, Vcl.Imaging.pngimage, PicturesUnit;
+
+Type
+    TMenuForm = Class(TForm)
+    WhiteCheckerImage: TImage;                                         
+    BlackCheckerImage: TImage;
+    BlackImage: TImage;
+    WhiteImage: TImage;
+    QueenImage: TImage;
+    Button1: TButton;
+    Edit1: TEdit;
+    Edit2: TEdit;
+    Label1: TLabel;
+    Label2: TLabel;
+    HaveStepImage: TImage;
+    RedImage: TImage;
+    YellowImage: TImage;
+        Procedure FormCreate(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    Private
+        { Private declarations }
+    Public
+        { Public declarations }
+    End;
+    
+
+Var
+    MenuForm: TMenuForm;
+
+Implementation
+
+{$R *.dfm}
+
+uses GameUnit;
+
+
+Procedure DownloadPictures();
+Begin
+    BlackColor := MenuForm.BlackImage.Picture;
+
+    WhiteColor := MenuForm.WhiteImage.Picture;
+
+    RedColor := MenuForm.RedImage.Picture;
+
+    YellowColor := MenuForm.YellowImage.Picture;
+
+    BlackChecker := MenuForm.BlackCheckerImage.Picture;
+    
+    WhiteChecker := MenuForm.WhiteCheckerImage.Picture;
+
+    Queen := MenuForm.QueenImage.Picture;
+
+    HaveStep:= MenuForm.HaveStepImage.Picture;
+    
+    //WhiteChecker := TPicture.Create;
+    //WhiteChecker.LoadFromFile('\\Mac\Home\Desktop\WhiteFigure.png');
+End;
+
+
+procedure TMenuForm.Button1Click(Sender: TObject);
+begin
+    //Form3.Init();
+    Form3.Show;
+    if Edit1.Text='' then
+        Form3.Label3.Caption := 'Player1'
+    else
+        Form3.Label3.Caption:= Edit1.Text;
+    if Edit2.Text='' then
+        Form3.Label4.Caption := 'Player2'
+    else
+        Form3.Label4.Caption:= Edit2.Text;
+end;
+
+Procedure TMenuForm.FormCreate(Sender: TObject);
+Begin
+    DownloadPictures();
+    MenuForm.Width := 650;
+    MenuForm.Height	:= 550;	
+End;
+
+End.

@@ -1,0 +1,939 @@
+Unit GameUnit;
+
+Interface
+
+Uses
+    Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+    Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.ImageList, JPEG,
+    Vcl.ImgList, Vcl.ExtCtrls, ClassCell, Stack, Vcl.Imaging.Pngimage, PicturesUnit, Math,
+    Vcl.ExtDlgs;
+
+Type
+
+    TGameForm = Class(TForm)
+        BackButton: TButton;
+        Score1: TLabel;
+        Score2: TLabel;
+        NameLabel1: TLabel;
+        NameLabel2: TLabel;
+        Image1: TImage;
+        Image2: TImage;
+        GiveUpButton2: TButton;
+        GiveUpButton1: TButton;
+        Procedure FormCreate(Sender: TObject);
+        Procedure OnFigurePress(Sender: TObject);
+        Procedure CreateMap();
+        Procedure BackButtonClick(Sender: TObject);
+        Procedure GiveUpButton2Click(Sender: TObject);
+        Procedure GiveUpButton1Click(Sender: TObject);
+    Private
+        { Private declarations }
+    Public
+        Procedure Init();
+    End;
+
+Const
+    MapSize: Integer = 8;
+
+Var
+    GameForm: TGameForm;
+    Cells: TAoAoCell;
+    SimpleSteps: TAoCell;
+    Map: TMap;
+    Stack: TStack;
+
+    CurrentPlayer, CountEatSteps: Integer;
+    PrevButton, PressedButton: TCell;
+    IsMoving, IsContinue, IsCombo, IsHasEat: Boolean;
+    IsFirstGame: Boolean;
+    CellSize: Integer;
+
+Implementation
+
+{$R *.dfm}
+
+Uses
+    ViewUnit;
+
+Procedure GiveUp(Player: Integer);
+Begin
+    For Var I := 0 To High(Map) Do
+        For Var J := 0 To High(Map) Do
+            If Map[I][J] = Player Then
+                Map[I][J] := 0;
+End;
+
+Procedure UpdateQuantityOfCheckers();
+Var
+    NumPlayer1, NumPlayer2: Integer;
+Begin
+    NumPlayer1 := 0;
+    NumPlayer2 := 0;
+    For Var I := 0 To High(Map) Do
+        For Var J := 0 To High(Map) Do
+            If Map[I][J] = 1 Then
+                Inc(NumPlayer1)
+            Else
+                If Map[I][J] = 2 Then
+                    Inc(NumPlayer2);
+    GameForm.Score1.Caption := Inttostr(NumPlayer1);
+    GameForm.Score2.Caption := Inttostr(NumPlayer2);
+End;
+
+Function CopyArray(Arr: TAoAoCell): TAoAoCellInfo; Overload;
+Var
+    NewArr: TAoAoCellInfo;
+Begin
+    For Var I := 0 To MapSize - 1 Do
+        For Var J := 0 To MapSize - 1 Do
+        Begin
+            NewArr[I][J].Image := Arr[I][J].GetImage;
+            NewArr[I][J].IsQueen := Arr[I][J].GetQueenParam();
+        End;
+
+    Result := NewArr;
+End;
+
+Function CopyArray(Arr: TMap): TMap; Overload;
+Var
+    NewArr: TMap;
+Begin
+    For Var I := 0 To MapSize - 1 Do
+        For Var J := 0 To MapSize - 1 Do
+            NewArr[I][J] := Arr[I][J];
+
+    Result := NewArr;
+End;
+
+Procedure DeleteEaten(EndButton, StartButton: TCell);
+Var
+    Count, StartIndexX, StartIndexY, CurrCount, I, J: Integer;
+Begin
+    Count := Abs((EndButton.CellImage.Top Div Cellsize) - (StartButton.CellImage.Top Div Cellsize));
+    //Вычисление абсолютного значения разницы между верхними координатами конечной и начальной кнопки, деленной на размер ячейки
+    StartIndexX := (EndButton.CellImage.Top Div Cellsize) - (StartButton.CellImage.Top Div Cellsize);
+    //Вычисление разницы между верхними координатами конечной и начальной кнопки, деленной на размер ячейки
+    StartIndexY := (EndButton.CellImage.Left Div Cellsize) - (StartButton.CellImage.Left Div Cellsize);
+    //Вычисление разницы между левыми координатами конечной и начальной кнопки, деленной на размер ячейки
+    If StartIndexX < 0 Then //Если отрицательное число
+        StartIndexX := -1//Устанавливаем StartIndexX в -1
+    Else
+        StartIndexX := 1; //В противном случае в 1
+    If StartIndexY < 0 Then //Если отрицательное число
+        StartIndexY := -1//Устанавливаем StartIndexY в -1
+    Else
+        StartIndexY := 1; //В противном случае в 1
+    CurrCount := 0; //Устанавливаем CurrCount в 0
+    I := StartButton.CellImage.Top Div Cellsize + StartIndexX; //Вычисляем начальное значение I
+    J := StartButton.CellImage.Left Div Cellsize + StartIndexY; //Вычисляем начальное значение J
+    While (Currcount < Count - 1) Do //Пока CurrCount меньше Count - 1
+    Begin
+        Map[I, J] := 0; //Устанавливаем значение ячейки на карте в 0
+        Cells[I][J].SetImage(Nil); //Убираем изображение ячейки
+        Cells[I][J].SetQueenParam(False); //Убираем параметр Queen ячейки
+        I := I + StartIndexX; //Увеличиваем I на StartIndexX
+        J := J + StartIndexY; //Увеличиваем J на StartIndexY
+        Inc(CurrCount); //Увеличиваем CurrCount на 1
+    End;
+    UpdateQuantityOfCheckers(); //Обновляем количество шашек
+End;
+
+Procedure SwitchButtonToQueen(Cell: TCell);
+Var
+    X, Y: Integer;
+Begin
+    Y := Cell.CellImage.Top Div Cellsize;
+    X := Cell.CellImage.Left Div Cellsize;
+    If (Map[Y][X] = 1) And (Y = MapSize - 1) Then
+        Cell.SetQueenParam(True);
+    If (Map[Y][X] = 2) And (Y = 0) Then
+        Cell.SetQueenParam(True);
+End;
+
+Procedure CloseSteps();
+Begin
+    For Var I := 0 To MapSize - 1 Do
+        For Var J := 0 To MapSize - 1 Do
+            If (I + J) Mod 2 = 1 Then
+                Cells[I][J].SetBackColor(BlackColor);
+End;
+
+Function IsInsideBorders(Ti, Tj: Integer): Boolean;
+Begin
+    If (Ti >= MapSize) Or (Tj >= MapSize) Or (Ti < 0) Or (Tj < 0) Then
+        Result := False
+    Else
+        Result := True;
+End;
+
+Function IsButtonHasEatStep(IcurrFigure, JcurrFigure: Integer; IsOneStep: Boolean): Boolean;
+Var
+    EatStep: Boolean;
+    I, J: Integer;
+    IsNotLeave: Boolean;
+    IsNotExit: Boolean;
+Begin
+    EatStep := False;
+    J := JcurrFigure + 1;
+    IsNotLeave := True;
+    IsNotExit := True;
+    I := IcurrFigure - 1;
+    While (I >= 0) And IsNotLeave And IsNotExit Do
+    Begin
+        If IsInsideBorders(I, J) Then
+        Begin
+            If (Map[I][J] <> 0) And (Map[I][J] <> CurrentPlayer) Then
+            Begin
+                EatStep := True;
+                If Not IsInsideBorders(I - 1, J + 1) Then
+                    EatStep := False
+                Else
+                    If Map[I - 1][J + 1] <> 0 Then
+                        EatStep := False
+                    Else
+                    Begin
+                        Result := EatStep;
+                        IsNotExit := False;
+                    End;
+            End;
+        End;
+        If J < 7 Then
+            Inc(J)
+        Else
+            IsNotLeave := False;
+        If IsOneStep Then
+            IsNotLeave := False;
+        Dec(I);
+    End;
+
+    J := JcurrFigure - 1;
+    I := IcurrFigure - 1;
+    IsNotLeave := True;
+    While (I >= 0) And IsNotLeave And IsNotExit Do
+    Begin
+        If IsInsideBorders(I, J) Then
+        Begin
+            If (Map[I][J] <> 0) And (Map[I][J] <> CurrentPlayer) Then
+            Begin
+                EatStep := True;
+                If Not IsInsideBorders(I - 1, J - 1) Then
+                    EatStep := False
+                Else
+                    If Map[I - 1][J - 1] <> 0 Then
+                        EatStep := False
+                    Else
+                    Begin
+                        Result := EatStep;
+                        IsNotExit := False;
+                    End;
+
+            End;
+        End;
+        If J > 0 Then
+            Dec(J)
+        Else
+            IsNotLeave := False;
+        If IsOneStep Then
+            IsNotLeave := False;
+        Dec(I);
+    End;
+
+    J := JcurrFigure - 1;
+    I := IcurrFigure + 1;
+    IsNotLeave := True;
+    While (I <= MapSize - 1) And IsNotLeave And IsNotExit Do
+    Begin
+        If IsInsideBorders(I, J) Then
+        Begin
+            If (Map[I][J] <> 0) And (Map[I][J] <> CurrentPlayer) Then
+            Begin
+                EatStep := True;
+                If Not IsInsideBorders(I + 1, J - 1) Then
+                    EatStep := False
+                Else
+                    If Map[I + 1][J - 1] <> 0 Then
+                        EatStep := False
+                    Else
+                    Begin
+                        Result := EatStep;
+                        IsNotExit := False;
+                    End;
+
+            End;
+        End;
+        If J > 0 Then
+            Dec(J)
+        Else
+            IsNotLeave := False;
+        If IsOneStep Then
+            IsNotLeave := False;
+        Inc(I);
+    End;
+
+    J := JcurrFigure + 1;
+    I := IcurrFigure + 1;
+    IsNotLeave := True;
+    While (I <= MapSize - 1) And IsNotLeave And IsNotExit Do
+    Begin
+        If IsInsideBorders(I, J) Then
+        Begin
+            If (Map[I][J] <> 0) And (Map[I][J] <> CurrentPlayer) Then
+            Begin
+                EatStep := True;
+                If Not IsInsideBorders(I + 1, J + 1) Then
+                    EatStep := False
+                Else
+                    If Map[I + 1][J + 1] <> 0 Then
+                        EatStep := False
+                    Else
+                    Begin
+                        Result := EatStep;
+                        IsNotExit := False;
+                    End;
+            End;
+        End;
+        If J < 7 Then
+            Inc(J)
+        Else
+            IsNotLeave := False;
+        If IsOneStep Then
+            IsNotLeave := False;
+        Inc(I);
+    End;
+    Result := EatStep;
+End;
+
+Procedure ActivateHavingMoveButton();
+Var
+    I, J: Integer;
+    IsNotExit: Boolean;
+Begin
+    IsNotExit := True;
+    If IsCombo Then
+        IsNotExit := False;
+    For I := 0 To MapSize - 1 Do
+        For J := 0 To MapSize - 1 Do
+        Begin
+            If (Map[I][J] = CurrentPlayer) And IsButtonHasEatStep(I, J, True) Then
+            Begin
+                Cells[I][J].Activate();
+                IsNotExit := False;
+            End;
+        End;
+    If IsNotExit Then
+    Begin
+        For I := 0 To MapSize - 1 Do
+            For J := 0 To MapSize - 1 Do
+            Begin
+                If (Map[I][J] = 1) And (CurrentPlayer = 1) And ((IsInsideBorders(I + 1, J - 1) And (Map[I + 1][J - 1] = 0)) Or
+                    (IsInsideBorders(I + 1, J + 1) And (Map[I + 1][J + 1] = 0))) Then
+                    Cells[I][J].Activate()
+                Else
+                    If (Map[I][J] = 2) And (CurrentPlayer = 2) And
+                        ((IsInsideBorders(I - 1, J - 1) And (Map[I - 1][J - 1] = 0)) Or
+                        (IsInsideBorders(I - 1, J + 1) And (Map[I - 1][J + 1] = 0))) Then
+                        Cells[I][J].Activate()
+                    Else
+                        If (Map[I][J] = CurrentPlayer) And Cells[I][J].GetQueenParam Then
+                            Cells[I][J].Activate();
+            End;
+    End;
+End;
+
+Procedure DeactivateAllButtons();
+Begin
+    For Var I := 0 To 7 Do
+        For Var J := 0 To 7 Do
+            Cells[I][J].Deactivate;
+End;
+              
+Procedure GoBackStep();
+Var
+    Data: TDataOfMap;
+    CellInfoArr: TAoAoCellInfo;  
+Begin                               
+    CloseSteps();            
+    Data := Stack.Pop();
+    CellInfoArr := Data.Cells;
+    For Var I := 0 To MapSize - 1 Do
+        For Var J := 0 To MapSize - 1 Do
+        Begin
+            Cells[I][J].SetImage(CellInfoArr[I][J].Image);
+            Cells[I][J].SetQueenParam(CellInfoArr[I][J].IsQueen);
+        End;
+    Map := Data.Map;
+    CurrentPlayer := Data.CurrPlayer;
+    DeactivateAllButtons();
+    ActivateHavingMoveButton();
+    UpdateQuantityOfCheckers();
+    If Stack.IsEmpty Then
+        GameForm.BackButton.Enabled := False;
+End;
+             
+Procedure TGameForm.BackButtonClick(Sender: TObject);
+Var
+    Data: TDataOfMap;
+    CellInfoArr: TAoAoCellInfo;
+Begin                               
+    CloseSteps();
+    Data := Stack.Pop();
+    CellInfoArr := Data.Cells;
+    For Var I := 0 To MapSize - 1 Do
+        For Var J := 0 To MapSize - 1 Do
+        Begin
+            Cells[I][J].SetImage(CellInfoArr[I][J].Image);
+            Cells[I][J].SetQueenParam(CellInfoArr[I][J].IsQueen);
+        End;
+    Map := Data.Map;
+    CurrentPlayer := Data.CurrPlayer;
+    DeactivateAllButtons();
+    ActivateHavingMoveButton();
+    UpdateQuantityOfCheckers();
+    If Stack.IsEmpty Then
+        BackButton.Enabled := False;
+End;
+
+Procedure TGameForm.CreateMap();
+Var
+    CurrImg: TImage;
+    I, J: Integer;
+    Cell: TCell;
+Begin
+    IsFirstGame := False;
+    For I := 0 To MapSize - 1 Do
+    Begin
+        For J := 0 To MapSize - 1 Do
+        Begin
+            CurrImg := TImage.Create(GameForm);
+            CurrImg.Parent := GameForm;
+            CurrImg.Left := J * CellSize;
+            CurrImg.Top := I * CellSize;
+            CurrImg.Width := CellSize;
+            CurrImg.Height := CellSize;
+            Cell := TCell.Create(CurrImg);
+            Cell.CellImage.Stretch := False;
+            If ((I + J) Mod 2 = 0) Then
+                Cell.SetBackColor(WhiteColor)
+            Else
+            Begin
+                Cell.CellImage.OnClick := OnFigurePress;
+                Cell.SetBackColor(BlackColor);
+                If Map[I][J] = 1 Then
+                    Cell.SetImage(WhiteChecker)
+                Else
+                    If Map[I][J] = 2 Then
+                        Cell.SetImage(BlackChecker);
+            End;
+            Cell.SetQueenParam(False);
+            Cells[I][J] := Cell;
+        End;
+    End;
+End;
+
+Procedure TGameForm.Init();
+Begin
+    For Var I := 0 To 7 Do //Цикл по строкам на доске
+    Begin
+        For Var J := 0 To 7 Do //Цикл по столбцам на доске
+        Begin
+            If (I Mod 2 = 0) And (J Mod 2 = 0) Then //Если оба индекса четные
+                Map[I, J] := 0//Устанавливаем значение ячейки в 0
+            Else
+                If (I Mod 2 = 1) And (J Mod 2 = 1) Then //Если оба индекса нечетные
+                    Map[I, J] := 0//Устанавливаем значение ячейки в 0
+                Else
+                    If I < 3 Then //Если индекс строки меньше 3
+                        Map[I, J] := 1//Устанавливаем значение ячейки в 1
+                    Else
+                        If I > 4 Then //Если индекс строки больше 4
+                            Map[I, J] := 2//Устанавливаем значение ячейки в 2
+                        Else
+                            Map[I, J] := 0; //В противном случае устанавливаем значение ячейки в 0
+        End;
+    End;
+
+    If IsFirstGame Then //Если это первая игра
+        GameForm.Createmap(); //Создаем карту
+
+    For Var I := 0 To 7 Do //Цикл по строкам на доске
+    Begin
+        For Var J := 0 To 7 Do //Цикл по столбцам на доске
+        Begin
+            Cells[I][J].SetQueenParam(False);
+            Cells[I][J].SetImage(Nil);
+            If Map[I][J] = 1 Then
+                Cells[I][J].SetImage(WhiteChecker)
+            Else
+                If Map[I][J] = 2 Then
+                    Cells[I][J].SetImage(BlackChecker);
+        End;
+    End;
+
+    IsMoving := False; //Устанавливаем флаг движения в false
+    IsHasEat := False; //Устанавливаем флаг наличия съедобных ходов в false
+    CurrentPlayer := 1; //Устанавливаем текущего игрока в 1
+    CountEatSteps := 0; //Устанавливаем счетчик съедобных ходов в 0
+    IsContinue := False; //Устанавливаем флаг продолжения в false
+    Setlength(SimpleSteps, 0); //Устанавливаем длину массива простых шагов в 0
+    PressedButton := TCell.Create(Nil); //Создаем новую ячейку для нажатой кнопки
+    PrevButton := TCell.Create(Nil); //Создаем новую ячейку для предыдущей кнопки
+    IsCombo := False; //Устанавливаем флаг комбо в false
+    DeactivateAllButtons; //Деактивируем все кнопки
+    ActivateHavingMoveButton; //Активируем доступные кнопки
+    Stack := TStack.Create(); //Создаем новый стек
+    UpdateQuantityOfCheckers; //Обновляем количество шашек
+End;
+
+Function CollectMapInfo(): TDataOfMap;
+Var
+    Data: TDataOfMap;
+Begin
+    Data.Map := CopyArray(Map);
+    Data.Cells := CopyArray(Cells);
+    Data.CurrPlayer := CurrentPlayer;
+    Result := Data;
+End;
+
+Procedure TGameForm.FormCreate(Sender: TObject);
+Begin
+    CellSize := (GameForm.Height Div 9);
+    GameForm.Height := Floor(CellSize * 8.55);
+    GameForm.Width := Floor(CellSize * 10);
+    IsFirstGame := True;
+    Init();
+    ActiveControl := Nil;
+End;
+
+Procedure ResetGame();
+Var
+    Player1, Player2: Integer; //Объявление переменных для отслеживания количества шашек у каждого игрока
+    TempWinner: Winner;
+Begin
+    Player1 := 0; //Инициализация переменной Player1 как False
+    Player2 := 0; //Инициализация переменной Player2 как False
+    For Var I := 0 To MapSize - 1 Do //Цикл по строкам на доске
+        For Var J := 0 To MapSize - 1 Do //Цикл по столбцам на доске
+        Begin
+            If Map[I][J] = 1 Then //Если в ячейке находится шашка игрока 1
+                Inc(Player1)//Увеличиваем Player1
+            Else
+                If Map[I][J] = 2 Then //Если в ячейке находится шашка игрока 2
+                    Inc(Player2); //Увеличиваем Player2
+        End;
+
+    If Player1 = 0 Then //Если у игрока 1 нет шашек
+    Begin
+        Application.MessageBox(PChar('Победил ' + GameForm.NameLabel2.Caption), 'ПОБЕДА', 0); //Выводим сообщение о победе игрока 2
+        TempWinner.Name := GameForm.NameLabel2.Caption;
+        TempWinner.Score := Player2;
+        ViewForm.AddNewWinner(TempWinner);
+    End
+    Else
+        If Player2 = 0 Then //Если у игрока 2 нет шашек
+        Begin
+            Application.MessageBox(PChar('Победил ' + GameForm.NameLabel1.Caption), 'ПОБЕДА', 0); //Выводим сообщение о победе игрока 1
+            TempWinner.Name := GameForm.NameLabel1.Caption;
+            TempWinner.Score := Player1;
+            ViewForm.AddNewWinner(TempWinner);
+        End;
+
+    If (Player1 = 0) Or (Player2 = 0) Then //Если у одного из игроков нет шашек
+    Begin
+        Stack.Free; //Освобождаем память, занимаемую стеком
+
+        GameForm.Init(); //Инициализируем форму
+        GameForm.Close(); //Закрываем форму
+    End;
+End;
+
+Procedure TGameForm.GiveUpButton2Click(Sender: TObject);
+Begin
+    GiveUp(2);
+    ResetGame();
+End;
+
+Procedure TGameForm.GiveUpButton1Click(Sender: TObject);
+Begin
+    GiveUp(1);
+    ResetGame();
+End;
+
+Procedure SwitchPlayer();
+Begin
+    If CurrentPlayer = 1 Then
+        CurrentPlayer := 2
+    Else
+        CurrentPlayer := 1;
+    ResetGame();
+End;
+
+Procedure CloseSimpleSteps(SimpleSteps: TAoCell);
+Begin
+    If Length(SimpleSteps) > 0 Then
+        For Var I := 0 To High(SimpleSteps) Do
+        Begin
+            SimpleSteps[I].SetBackColor(BlackColor);
+            SimpleSteps[I].Deactivate();
+        End;
+End;
+
+Procedure ShowProceduralEat(I, J: Integer; IsOneStep: Boolean);
+Var
+    DirX, DirY, Il, Jl, Ik, Jk: Integer;
+    IsEmpty, CloseSimple: Boolean;
+    ToClose: TAoCell;
+    Temp: TAoI;
+    IsNotLeave: Boolean;
+Begin
+    IsNotLeave := True;
+    DirX := I - PressedButton.CellImage.Top Div CellSize;
+    DirY := J - PressedButton.CellImage.Left Div CellSize;
+    If DirX < 0 Then
+        DirX := -1
+    Else
+        DirX := 1;
+    If DirY < 0 Then
+        DirY := -1
+    Else
+        DirY := 1;
+
+    Il := I;
+    Jl := J;
+    IsEmpty := True;
+    While IsInsideBorders(Il, Jl) And IsNotLeave Do
+    Begin
+        If (Map[I][J] <> 0) And (Map[Il][Jl] <> CurrentPlayer) Then
+        Begin
+            IsEmpty := False;
+            IsNotLeave := False;
+        End;
+        If IsNotLeave Then
+        Begin
+            Il := Il + DirX;
+            Jl := Jl + DirY;
+        End;
+        If IsOneStep Then
+            IsNotLeave := False;
+    End;
+    IsNotLeave := True;
+
+    If Not IsEmpty Then
+    Begin
+        Setlength(ToClose, 0);
+        CloseSimple := False;
+        Ik := Il + DirX;
+        Jk := Jl + DirY;
+        While IsInsideBorders(Ik, Jk) And IsNotLeave Do
+        Begin
+            If Map[Ik, Jk] = 0 Then
+            Begin
+                Setlength(Temp, 2);
+                Temp[0] := DirX;
+                Temp[1] := DirY;
+                If IsButtonHasEatStep(Ik, Jk, IsOneStep) Then
+                Begin
+                    CloseSimple := True
+                End
+                Else
+                Begin
+                    Setlength(ToClose, Length(ToClose) + 1);
+                    ToClose[High(ToClose)] := Cells[Ik, Jk];
+                End;
+                Cells[Ik, Jk].SetBackColor(YellowColor);
+                Cells[Ik, Jk].Activate();
+                Inc(CountEatSteps);
+            End
+            Else
+                IsNotLeave := False;
+            If IsOneStep Then
+                IsNotLeave := False;
+            Jk := Jk + DirY;
+            Ik := Ik + DirX;
+        End;
+        If (Length(ToClose) > 0) And CloseSimple Then
+            CloseSimpleSteps(ToClose);
+    End;
+End;
+
+Function DeterminePath(Ti, Tj: Integer): Boolean;
+Var
+    Answ: Boolean;
+Begin
+    If (Map[Ti][Tj] = 0) And Not IsContinue Then //Если ячейка на карте пуста и не продолжается удаление шашек
+    Begin
+        Cells[Ti][Tj].SetBackColor(YellowColor); //Устанавливаем желтый цвет фона для ячейки
+        Cells[Ti][Tj].Activate(); //Активируем ячейку
+        Setlength(Simplesteps, Length(Simplesteps) + 1); //Увеличиваем длину массива Simplesteps на 1
+        Simplesteps[High(Simplesteps)] := Cells[Ti, Tj]; //Добавляем текущую ячейку в массив Simplesteps
+        Answ := True; //Устанавливаем Answ в True
+    End
+    Else
+    Begin
+        If Map[Ti][Tj] <> CurrentPlayer Then //Если ячейка на карте не принадлежит текущему игроку
+        Begin
+            ShowProceduralEat(Ti, Tj, True); //Вызываем процедуру ShowProceduralEat
+        End;
+        Answ := False; //Устанавливаем Answ в False
+    End;
+    Result := Answ; //Возвращаем результат Answ
+End;
+
+Procedure ShowDiagonal(IcurrFigure, JcurrFigure: Integer; IsOneStep: Boolean = False);
+Var
+    I, J: Integer;
+    Temp: TAoI;
+Begin
+    Setlength(Temp, 2);
+    J := JcurrFigure + 1;
+    For I := IcurrFigure - 1 DownTo 0 Do
+    Begin
+        If (CurrentPlayer = 1) And IsOneStep And Not IsContinue And Not IsButtonHasEatStep(IcurrFigure, JcurrFigure, IsOneStep) Then
+            Break;
+        If IsInsideBorders(I, J) Then
+        Begin
+            If Not DeterminePath(I, J) Then
+                Break;
+        End;
+        If J < 7 Then
+            Inc(J)
+        Else
+            Break;
+        If IsOneStep Then
+            Break;
+    End;
+
+    J := JcurrFigure - 1;
+    For I := IcurrFigure - 1 DownTo 0 Do
+    Begin
+        If (CurrentPlayer = 1) And IsOneStep And Not IsContinue And Not IsButtonHasEatStep(IcurrFigure, JcurrFigure, IsOneStep) Then
+            Break;
+        If IsInsideBorders(I, J) Then
+        Begin
+            If Not DeterminePath(I, J) Then
+                Break;
+        End;
+        If J > 0 Then
+            Dec(J)
+        Else
+            Break;
+        If IsOneStep Then
+            Break;
+    End;
+
+    J := JcurrFigure - 1;
+    For I := IcurrFigure + 1 To MapSize - 1 Do
+    Begin
+        Temp[0] := 1;
+        Temp[1] := -1;
+        If (CurrentPlayer = 2) And IsOneStep And Not IsContinue And Not IsButtonHasEatStep(IcurrFigure, JcurrFigure, IsOneStep) Then
+            Break;
+        If IsInsideBorders(I, J) Then
+        Begin
+            If Not DeterminePath(I, J) Then
+                Break;
+        End;
+        If J > 0 Then
+            Dec(J)
+        Else
+            Break;
+        If IsOneStep Then
+            Break;
+    End;
+
+    J := JcurrFigure + 1;
+    For I := IcurrFigure + 1 To MapSize - 1 Do
+    Begin
+        If (CurrentPlayer = 2) And IsOneStep And Not IsContinue And Not IsButtonHasEatStep(IcurrFigure, JcurrFigure, IsOneStep) Then
+            Break;
+        If IsInsideBorders(I, J) Then
+        Begin
+            If Not DeterminePath(I, J) Then
+                Break;
+        End;
+        If J < 7 Then
+            Inc(J)
+        Else
+            Break;
+        If IsOneStep Then
+            Break;
+    End;
+End;
+
+Procedure ShowSteps(IcurrFigure, JcurrFigure: Integer; IsOnestep: Boolean);
+Begin
+    SimpleSteps := Nil;
+    ShowDiagonal(IcurrFigure, JcurrFigure, IsOnestep);
+    If CountEatSteps > 0 Then
+        CloseSimpleSteps(SimpleSteps)
+End;
+
+Procedure ShowPossibleSteps();
+Var
+    IsOneStep, IsEatStep: Boolean;
+Begin
+    IsOneStep := True;
+    IsEatStep := False;
+    DeactivateAllButtons();          //эта
+    For Var I := 0 To MapSize-1 Do
+        For Var J := 0 To MapSize-1 Do
+        Begin
+            If (Map[I, J] = Currentplayer) Then
+            Begin
+                If Cells[I][J].GetQueenParam() Then
+                    IsOneStep := False
+                Else
+                    IsOneStep := True;
+                If IsButtonHasEatStep(I, J, IsOneStep) Then
+                Begin
+                    IsEatStep := True;
+                    Cells[I][J].Activate();
+                End;
+            End;
+        End;
+    If Not IseatStep Then
+        ActivateHavingMoveButton();
+End;
+
+Function IsFigureOnWay(X1, Y1, X2, Y2: Integer): Boolean;
+Var
+    Answ: Boolean;
+Begin
+    Answ := False;
+    If (X2 > X1) And (Y2 > Y1) Then
+    Begin
+        While X1 < X2 Do
+        Begin
+            If Map[Y1, X1] > 0 Then
+                Answ := True;
+            Inc(X1);
+            Inc(Y1);
+        End;
+    End
+    Else
+        If (X2 > X1) And (Y2 < Y1) Then
+        Begin
+            While X1 < X2 Do
+            Begin
+                If Map[Y1, X1] > 0 Then
+                    Answ := True;
+                Inc(X1);
+                Dec(Y1);
+            End;
+        End
+        Else
+            If (X2 < X1) And (Y2 > Y1) Then
+            Begin
+                While X1 > X2 Do
+                Begin
+                    If Map[Y1, X1] > 0 Then
+                        Answ := True;
+                    Dec(X1);
+                    Inc(Y1);
+                End;
+            End
+            Else
+                If (X2 < X1) And (Y2 < Y1) Then
+                Begin
+                    While X1 > X2 Do
+                    Begin
+                        If Map[Y1, X1] > 0 Then
+                            Answ := True;
+                        Dec(X1);
+                        Dec(Y1);
+                    End;
+                End;
+    Result := Answ;
+End;
+
+Procedure TGameForm.OnFigurePress(Sender: TObject);
+Var
+    X, Y, Temp, X1, Y1: Integer;
+    Image: TImage;
+Begin
+    Image := TImage(Sender);
+    X := Image.Left Div Cellsize;
+    Y := Image.Top Div Cellsize;
+    PressedButton := Cells[Y][X];
+
+    If ((PrevButton = PressedButton) And IsCombo) Then
+        Exit;
+
+    If PrevButton.CellImage <> Nil Then
+    Begin
+        Prevbutton.SetBackColor(BlackColor);
+        X1 := PrevButton.CellImage.Left Div Cellsize;
+        Y1 := PrevButton.CellImage.Top Div Cellsize;
+    End;
+
+    If (Map[Y, X] <> 0) And (Map[Y][X] = CurrentPlayer) And Not IsCombo Then
+    Begin
+        CloseSteps();
+        Pressedbutton.SetBackColor(RedColor);
+        DeactivateAllButtons();
+        PressedButton.Activate();
+        CountEatSteps := 0;
+        ShowSteps(Y, X, Not PressedButton.GetQueenParam);
+
+        If IsMoving Then
+        Begin
+            CloseSteps();
+            Pressedbutton.SetBackColor(BlackColor);
+            ShowPossibleSteps();
+            IsMoving := False;
+        End
+        Else
+        Begin
+            IsMoving := True;
+        End;
+        ActivateHavingMoveButton;
+    End
+    Else
+    Begin
+        If IsMoving Then
+        Begin
+            Stack.Push(CollectMapInfo());
+            BackButton.Enabled := True;
+            X1 := PrevButton.CellImage.Left Div Cellsize;
+            Y1 := PrevButton.CellImage.Top Div Cellsize;
+            IsContinue := False;
+            If (Abs(X - X1) > 1) And IsFigureOnWay(X, Y, X1, Y1) Then
+            Begin
+                IsContinue := True;
+                IsCombo := True;
+                DeleteEaten(PressedButton, PrevButton);
+            End;
+            Temp := Map[Y][X];
+            Map[Y][X] := Map[Y1][X1];
+            Map[Y1][X1] := Temp;
+            PressedButton.SetImage(PrevButton.GetImage);
+            PrevButton.SetImage(Nil);
+            PressedButton.SetQueenParam(PrevButton.GetQueenParam());
+            PrevButton.SetQueenParam(False);
+            SwitchButtonToQueen(PressedButton);
+            CountEatSteps := 0;
+            IsMoving := False;
+            CloseSteps();
+            DeactivateAllButtons();
+            ActivateHavingMoveButton;
+            ShowSteps(Y, X, Not PressedButton.GetQueenParam());
+            If (CountEatSteps = 0) Or Not IsContinue Then
+            Begin
+                IsCombo := False;
+                CloseSteps();
+                SwitchPlayer();
+                ShowPossibleSteps();
+                IsContinue := False;
+            End
+            Else
+                If IsContinue Then
+                Begin
+                    Pressedbutton.SetBackColor(RedColor);
+                    PressedButton.Activate();
+                    IsMoving := True;
+                End;
+        End;
+    End;
+    PrevButton := Cells[Y][X];
+End;
+
+End.

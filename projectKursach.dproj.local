@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>1899.12.30 00:00:00.000.055,\\Mac\Home\Desktop\kursach\Unit1.pas=\\Mac\Home\Desktop\kursach\Stack.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.136,\\Mac\Home\Desktop\kursach\Unit1.pas=\\Mac\Home\Desktop\kursach\GameUnit.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.235,=\\Mac\Home\Desktop\kursach\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.795,\\Mac\Home\Desktop\kursach\PicturesUnit.pas=\\Mac\Home\Desktop\kursach\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.706,=\\Mac\Home\Desktop\kursach\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.000,=\\Mac\Home\Desktop\kursach\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.406,\\Mac\Home\Desktop\kursach\ViewUnit.dfm=\\Mac\Home\Desktop\kursach\Unit1.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.406,\\Mac\Home\Desktop\kursach\ViewUnit.pas=\\Mac\Home\Desktop\kursach\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.136,\\Mac\Home\Desktop\kursach\Unit1.dfm=\\Mac\Home\Desktop\kursach\GameUnit.dfm</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.752,=\\Mac\Home\Desktop\kursach\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.291,\\Mac\Home\Desktop\kursach\MenuUnit.pas=\\Mac\Home\Desktop\kursach\kursach.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.291,\\Mac\Home\Desktop\kursach\MenuUnit.dfm=\\Mac\Home\Desktop\kursach\kursach.dfm</Transaction>
+  </Transactions>
+</BorlandProject>

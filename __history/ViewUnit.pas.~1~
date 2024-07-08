@@ -1,0 +1,30 @@
+Unit ViewUnit;
+
+Interface
+
+Uses
+    Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+    Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Grids;
+
+Type
+    Winner = Record
+        Name: String[20];
+        Score: Integer;
+    End;
+    
+    TViewForm = Class(TForm)
+        ViewStringGrid: TStringGrid;
+    Private
+        { Private declarations }
+    Public
+        { Public declarations }
+    End;
+
+Var
+    ViewForm: TViewForm;
+
+Implementation
+
+{$R *.dfm}
+
+End.

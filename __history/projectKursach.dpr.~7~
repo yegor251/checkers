@@ -1,0 +1,18 @@
+program projectKursach;
+
+uses
+  Vcl.Forms,
+  kursach in 'kursach.pas' {MenuForm},
+  Stack in 'Stack.pas',
+  PicturesUnit in 'PicturesUnit.pas',
+  GameUnit in 'GameUnit.pas' {Form3};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TMenuForm, MenuForm);
+  Application.CreateForm(TForm3, Form3);
+  Application.Run;
+end.

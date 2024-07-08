@@ -1,0 +1,76 @@
+Unit Stack;
+
+Interface
+
+Uses
+    Classes, SysUtils, Forms, Dialogs, ComCtrls,Vcl.Graphics, ClassCell;
+
+Type
+    TCellInfo = Record
+        Image: TPicture;
+        isQueen:Boolean;
+    End;
+
+    TAoAoCellInfo = Array[0..7] of Array[0..7] Of TCellInfo;
+
+    TDataOfMap = Record
+        Map: TMap;
+        Cells: TAoAoCellInfo;
+        CurrPlayer: Integer;
+    End;
+
+    PNode = ^TNode;
+
+    TNode = Record
+        Data: TDataOfMap;
+        Next: PNode;
+    End;
+
+    TStack = Class
+    Private
+        FTop: PNode;
+    Public
+        Constructor Create;
+        Destructor Destroy; Override;
+        Procedure Push(Value: TDataOfMap);
+        Function Pop: TDataOfMap;
+    End;
+
+Implementation
+
+Constructor TStack.Create;
+Begin
+    FTop := Nil;
+End;
+
+Destructor TStack.Destroy;
+Begin
+    While FTop <> Nil Do
+        Pop;
+    Inherited;  //?
+End;
+
+Procedure TStack.Push(Value: TDataOfMap);
+Var
+    NewNode: PNode;
+Begin
+    New(NewNode);
+    NewNode^.Data := Value;
+    NewNode^.Next := FTop;
+    FTop := NewNode;
+End;
+
+Function TStack.Pop: TDataOfMap;
+Var
+    TempNode: PNode;
+Begin
+    If FTop = Nil Then
+        Raise Exception.Create('Stack is empty');
+    Result := FTop^.Data;
+    TempNode := FTop;
+    FTop := FTop^.Next;
+    Dispose(TempNode);
+End;
+
+
+End.

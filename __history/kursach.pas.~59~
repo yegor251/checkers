@@ -1,0 +1,93 @@
+Unit kursach;
+
+Interface
+
+Uses
+    Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+    Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, System.ImageList, JPEG,
+    Vcl.ImgList, Vcl.ExtCtrls, Vcl.Imaging.Pngimage, PicturesUnit, Stack;
+
+Type
+    TMenuForm = Class(TForm)
+        WhiteCheckerImage: TImage;
+        BlackCheckerImage: TImage;
+        BlackImage: TImage;
+        WhiteImage: TImage;
+        QueenImage: TImage;
+        Button1: TButton;
+        Edit1: TEdit;
+        Edit2: TEdit;
+        Label1: TLabel;
+        Label2: TLabel;
+        HaveStepImage: TImage;
+        RedImage: TImage;
+        YellowImage: TImage;
+        Procedure FormCreate(Sender: TObject);
+        Procedure Button1Click(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    Private
+        { Private declarations }
+    Public
+        { Public declarations }
+    End;
+
+Var
+    MenuForm: TMenuForm;
+
+Implementation
+
+{$R *.dfm}
+
+Uses
+    GameUnit;
+
+Procedure DownloadPictures();
+Var
+    Png: TPngImage;
+    x,y: Integer;
+    Bitmap: TBitmap;
+Begin
+    BlackColor := MenuForm.BlackImage.Picture;
+
+    WhiteColor := MenuForm.WhiteImage.Picture;
+
+    RedColor := MenuForm.RedImage.Picture;
+
+    YellowColor := MenuForm.YellowImage.Picture;
+
+    BlackChecker := MenuForm.BlackCheckerImage.Picture;
+
+    WhiteChecker := MenuForm.WhiteCheckerImage.Picture;
+
+    Queen := MenuForm.QueenImage.Picture;
+
+    HaveStep := MenuForm.HaveStepImage.Picture;
+
+End;
+
+Procedure TMenuForm.Button1Click(Sender: TObject);
+Begin
+    Form3.Show;
+    If Edit1.Text = '' Then
+        Form3.Label3.Caption := 'Player1'
+    Else
+        Form3.Label3.Caption := Edit1.Text;
+    If Edit2.Text = '' Then
+        Form3.Label4.Caption := 'Player2'
+    Else
+        Form3.Label4.Caption := Edit2.Text;
+End;
+
+procedure TMenuForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+    CanClose := MessageBox(MenuForm.Handle, 'Хотите выйти?', 'Выход', MB_YESNO + MB_ICONQUESTION) = ID_YES;
+end;
+
+Procedure TMenuForm.FormCreate(Sender: TObject);
+Begin
+    DownloadPictures();
+    MenuForm.Width := 650;
+    MenuForm.Height := 550;
+End;
+
+End.
